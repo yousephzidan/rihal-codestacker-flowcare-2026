@@ -30,7 +30,7 @@ FlowCare is designed to handle high daily traffic at government-style counters, 
 ## Project Structure
 
 ```
-BE_Solution/
+rihal-codestacker-flowcare-2026/
 ├── app/
 │   ├── api/                    # API route handlers
 │   │   ├── public.py           # Public endpoints
