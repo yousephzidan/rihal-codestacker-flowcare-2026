@@ -1,0 +1,33 @@
+version: "3.9"
+
+services:
+
+  api:
+    build: .
+    container_name: flowcare_api
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://flowcare:flowcare@db:5432/flowcare_db
+      - DEBUG=True
+    depends_on:
+      - db
+    volumes:
+      - ./uploads:/app/uploads
+    restart: always
+
+  db:
+    image: postgres:16
+    container_name: flowcare_db
+    environment:
+      POSTGRES_USER: flowcare
+      POSTGRES_PASSWORD: flowcare
+      POSTGRES_DB: flowcare_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    restart: always
+
+volumes:
+  postgres_data:
