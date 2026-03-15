@@ -1,0 +1,1057 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FlowCare API Tester</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+        .role-selector {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .role-selector select {
+            padding: 10px;
+            font-size: 16px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-right: 10px;
+        }
+        .role-selector input {
+            padding: 10px;
+            font-size: 16px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-right: 10px;
+            width: 200px;
+        }
+        .role-selector button {
+            padding: 10px 20px;
+            font-size: 16px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .role-selector button:hover {
+            background: #0056b3;
+        }
+        .user-info {
+            margin-top: 15px;
+            padding: 10px;
+            background: #e7f3ff;
+            border-radius: 4px;
+            display: none;
+        }
+        .user-info.active {
+            display: block;
+        }
+        .tabs {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            margin-bottom: 20px;
+        }
+        .tab {
+            padding: 10px 20px;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .tab:hover {
+            background: #f0f0f0;
+        }
+        .tab.active {
+            background: #007bff;
+            color: white;
+            border-color: #007bff;
+        }
+        .section {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            display: none;
+        }
+        .section.active {
+            display: block;
+        }
+        .section h2 {
+            color: #333;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #007bff;
+        }
+        .endpoint {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #f9f9f9;
+            border-radius: 4px;
+        }
+        .endpoint h3 {
+            color: #555;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .method {
+            padding: 3px 8px;
+            border-radius: 3px;
+            font-size: 12px;
+            font-weight: bold;
+            color: white;
+        }
+        .method.get { background: #28a745; }
+        .method.post { background: #007bff; }
+        .method.patch { background: #ffc107; color: #333; }
+        .method.delete { background: #dc3545; }
+        .method.put { background: #6c757d; }
+        .endpoint button {
+            padding: 8px 16px;
+            font-size: 14px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        .endpoint button:hover {
+            background: #0056b3;
+        }
+        .endpoint button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .endpoint input, .endpoint select, .endpoint textarea {
+            padding: 8px;
+            font-size: 14px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-right: 10px;
+            margin-bottom: 5px;
+            width: 100%;
+            max-width: 300px;
+        }
+        .endpoint textarea {
+            width: 100%;
+            max-width: 500px;
+            min-height: 80px;
+            font-family: monospace;
+        }
+        .endpoint .input-group {
+            margin-bottom: 10px;
+        }
+        .endpoint .input-group label {
+            display: block;
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 3px;
+        }
+        .result {
+            margin-top: 15px;
+            padding: 15px;
+            background: #f4f4f4;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 13px;
+            white-space: pre-wrap;
+            word-break: break-all;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .result.success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+        }
+        .result.error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 3px;
+            font-size: 12px;
+            margin-left: 10px;
+        }
+        .status-badge.success { background: #28a745; color: white; }
+        .status-badge.error { background: #dc3545; color: white; }
+        .credentials-list {
+            margin-top: 20px;
+            padding: 15px;
+            background: #fff3cd;
+            border-radius: 4px;
+        }
+        .credentials-list h4 {
+            margin-bottom: 10px;
+        }
+        .credentials-list code {
+            display: block;
+            padding: 3px 0;
+            font-size: 13px;
+        }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>FlowCare API Tester</h1>
+        
+        <div class="role-selector">
+            <h3>🔐 Login</h3>
+            <select id="roleSelect">
+                <option value="">Select a role to test...</option>
+                <option value="admin">Admin</option>
+                <option value="mgr_muscat">Branch Manager (Muscat)</option>
+                <option value="mgr_suhar">Branch Manager (Suhar)</option>
+                <option value="staff_muscat_1">Staff (Muscat)</option>
+                <option value="staff_muscat_2">Staff (Muscat - 2)</option>
+                <option value="staff_suhar_1">Staff (Suhar)</option>
+                <option value="cust_ahmed">Customer (Ahmed)</option>
+                <option value="cust_fatima">Customer (Fatima)</option>
+                <option value="cust_khalid">Customer (Khalid)</option>
+                <option value="custom">Custom User</option>
+            </select>
+            <input type="text" id="customUsername" placeholder="Username" class="hidden">
+            <input type="password" id="customPassword" placeholder="Password" class="hidden">
+            <button onclick="login()">Login</button>
+            
+            <div id="userInfo" class="user-info">
+                <strong>Logged in as:</strong> <span id="currentUser"></span>
+                <span class="status-badge success" id="loginStatus">✓ Logged in</span>
+            </div>
+            
+            <div class="credentials-list">
+                <h4>📋 Available Test Credentials:</h4>
+                <code>Admin: admin / Admin@123</code>
+                <code>Manager Muscat: mgr_muscat / Manager@123</code>
+                <code>Manager Suhar: mgr_suhar / Manager@123</code>
+                <code>Staff Muscat 1: staff_muscat_1 / Staff@123</code>
+                <code>Staff Muscat 2: staff_muscat_2 / Staff@123</code>
+                <code>Staff Suhar 1: staff_suhar_1 / Staff@123</code>
+                <code>Customer: cust_ahmed / Customer@123</code>
+                <code>Customer: cust_fatima / Customer@123</code>
+                <code>Customer: cust_khalid / Customer@123</code>
+            </div>
+        </div>
+
+        <div class="tabs">
+            <div class="tab active" data-section="public">🔓 Public Endpoints</div>
+            <div class="tab" data-section="auth">🔐 Authentication</div>
+            <div class="tab" data-section="customer">👤 Customer</div>
+            <div class="tab" data-section="management">⚙️ Management</div>
+            <div class="tab" data-section="staff">👥 Staff & Customers</div>
+            <div class="tab" data-section="files">📁 Files</div>
+        </div>
+
+        <!-- Public Endpoints -->
+        <div id="public" class="section active">
+            <h2>🔓 Public Endpoints (No Login Required)</h2>
+            
+            <div class="endpoint">
+                <h3><span class="method get">GET</span> List Branches</h3>
+                <button onclick="testEndpoint('getBranches')">Test</button>
+                <div class="result" id="result-getBranches"></div>
+            </div>
+
+            <div class="endpoint">
+                <h3><span class="method get">GET</span> List Services by Branch</h3>
+                <div class="input-group">
+                    <label>Branch ID:</label>
+                    <input type="text" id="public-branch-id" value="br_muscat_001">
+                </div>
+                <button onclick="testEndpoint('getServices')">Test</button>
+                <div class="result" id="result-getServices"></div>
+            </div>
+
+            <div class="endpoint">
+                <h3><span class="method get">GET</span> List Available Slots</h3>
+                <div class="input-group">
+                    <label>Branch ID:</label>
+                    <input type="text" id="public-slots-branch" value="br_muscat_001">
+                </div>
+                <div class="input-group">
+                    <label>Service Type ID (optional):</label>
+                    <input type="text" id="public-slots-service" value="">
+                </div>
+                <div class="input-group">
+                    <label>Date (optional):</label>
+                    <input type="text" id="public-slots-date" placeholder="YYYY-MM-DD">
+                </div>
+                <button onclick="testEndpoint('getSlots')">Test</button>
+                <div class="result" id="result-getSlots"></div>
+            </div>
+        </div>
+
+        <!-- Authentication -->
+        <div id="auth" class="section">
+            <h2>🔐 Authentication</h2>
+            
+            <div class="endpoint">
+                <h3><span class="method post">POST</span> Register Customer</h3>
+                <div class="input-group">
+                    <label>Username:</label>
+                    <input type="text" id="reg-username" value="newcustomer">
+                </div>
+                <div class="input-group">
+                    <label>Password:</label>
+                    <input type="password" id="reg-password" value="NewTest@123">
+                </div>
+                <div class="input-group">
+                    <label>Full Name:</label>
+                    <input type="text" id="reg-fullname" value="New Test Customer">
+                </div>
+                <div class="input-group">
+                    <label>Email:</label>
+                    <input type="text" id="reg-email" value="newtest@example.com">
+                </div>
+                <div class="input-group">
+                    <label>Phone:</label>
+                    <input type="text" id="reg-phone" value="+96899999999">
+                </div>
+                <div class="input-group">
+                    <label>ID Image (base64):</label>
+                    <input type="text" id="reg-idimage" value="data:image/jpeg;base64,/9j/4AAQSkZJRg==">
+                </div>
+                <button onclick="testEndpoint('register')">Test</button>
+                <div class="result" id="result-register"></div>
+            </div>
+
+            <div class="endpoint">
+                <h3><span class="method get">GET</span> Get Current User Info</h3>
+                <button onclick="testEndpoint('getMe')">Test</button>
+                <div class="result" id="result-getMe"></div>
+            </div>
+        </div>
+
+        <!-- Customer Endpoints -->
+        <div id="customer" class="section">
+            <h2>👤 Customer Endpoints</h2>
+            
+            <div class="endpoint">
+                <h3><span class="method post">POST</span> Book Appointment</h3>
+                <div class="input-group">
+                    <label>Branch ID:</label>
+                    <input type="text" id="book-branch" value="br_muscat_001">
+                </div>
+                <div class="input-group">
+                    <label>Service Type ID:</label>
+                    <input type="text" id="book-service" value="svc_mus_001">
+                </div>
+                <div class="input-group">
+                    <label>Slot ID (check available slots first):</label>
+                    <input type="text" id="book-slot" value="slot_mus_007">
+                </div>
+                <button onclick="testEndpoint('bookAppointment')">Test</button>
+                <div class="result" id="result-bookAppointment"></div>
+            </div>
+
+            <div class="endpoint">
+                <h3><span class="method get">GET</span> List My Appointments</h3>
+                <div class="input-group">
+                    <label>Status Filter (optional):</label>
+                    <select id="my-appts-status">
+                        <option value="">All</option>
+                        <option value="BOOKED">BOOKED</option>
+                        <option value="CHECKED_IN">CHECKED_IN</option>
+                        <option value="COMPLETED">COMPLETED</option>
+                        <option value="CANCELLED">CANCELLED</option>
+                    </select>
+                </div>
+                <button onclick="testEndpoint('listMyAppointments')">Test</button>
+                <div class="result" id="result-listMyAppointments"></div>
+            </div>
+
+            <div class="endpoint">
+                <h3><span class="method get">GET</span> Get Appointment Details</h3>
+                <div class="input-group">
+                    <label>Appointment ID:</label>
+                    <input type="text" id="appt-details-id" value="appt_001">
+                </div>
+                <button onclick="testEndpoint('getAppointmentDetails')">Test</button>
+                <div class="result" id="result-getAppointmentDetails"></div>
+            </div>
+
+            <div class="endpoint">
+                <h3><span class="method delete">DELETE</span> Cancel Appointment</h3>
+                <div class="input-group">
+                    <label>Appointment ID:</label>
+                    <input type="text" id="cancel-appt-id" value="appt_001">
+                </div>
+                <button onclick="testEndpoint('cancelAppointment')">Test</button>
+                <div class="result" id="result-cancelAppointment"></div>
+            </div>
+
+            <div class="endpoint">
+                <h3><span class="method post">POST</span> Reschedule Appointment</h3>
+                <div class="input-group">
+                    <label>Appointment ID:</label>
+                    <input type="text" id="reschedule-appt-id" value="appt_001">
+                </div>
+                <div class="input-group">
+                    <label>New Slot ID:</label>
+                    <input type="text" id="reschedule-slot-id" value="slot_mus_002">
+                </div>
+                <button onclick="testEndpoint('rescheduleAppointment')">Test</button>
+                <div class="result" id="result-rescheduleAppointment"></div>
+            </div>
+        </div>
+
+        <!-- Management Endpoints -->
+        <div id="management" class="section">
+            <h2>⚙️ Management (Admin/Manager/Staff)</h2>
+            
+            <div class="endpoint">
+                <h3><span class="method get">GET</span> List Appointments</h3>
+                <div class="input-group">
+                    <label>Branch ID (optional):</label>
+                    <input type="text" id="mgmt-appts-branch" value="">
+                </div>
+                <div class="input-group">
+                    <label>Staff ID (optional):</label>
+                    <input type="text" id="mgmt-appts-staff" value="">
+                </div>
+                <div class="input-group">
+                    <label>Status (optional):</label>
+                    <select id="mgmt-appts-status">
+                        <option value="">All</option>
+                        <option value="BOOKED">BOOKED</option>
+                        <option value="CHECKED_IN">CHECKED_IN</option>
+                        <option value="COMPLETED">COMPLETED</option>
+                        <option value="CANCELLED">CANCELLED</option>
+                    </select>
+                </div>
+                <button onclick="testEndpoint('listAppointments')">Test</button>
+                <div class="result" id="result-listAppointments"></div>
+            </div>
+
+            <div class="endpoint">
+                <h3><span class="method patch">PATCH</span> Update Appointment Status</h3>
+                <div class="input-group">
+                    <label>Appointment ID:</label>
+                    <input type="text" id="update-appt-id" value="appt_001">
+                </div>
+                <div class="input-group">
+                    <label>New Status:</label>
+                    <select id="update-appt-status">
+                        <option value="BOOKED">BOOKED</option>
+                        <option value="CHECKED_IN">CHECKED_IN</option>
+                        <option value="NO_SHOW">NO_SHOW</option>
+                        <option value="COMPLETED">COMPLETED</option>
+                        <option value="CANCELLED">CANCELLED</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label>Notes (optional):</label>
+                    <input type="text" id="update-appt-notes" value="">
+                </div>
+                <button onclick="testEndpoint('updateAppointment')">Test</button>
+                <div class="result" id="result-updateAppointment"></div>
+            </div>
+
+            <div class="endpoint">
+                <h3><span class="method post">POST</span> Create Slot</h3>
+                <div class="input-group">
+                    <label>Slot ID:</label>
+                    <input type="text" id="create-slot-id" value="slot_test_001">
+                </div>
+                <div class="input-group">
+                    <label>Branch ID:</label>
+                    <input type="text" id="create-slot-branch" value="br_muscat_001">
+                </div>
+                <div class="input-group">
+                    <label>Service Type ID:</label>
+                    <input type="text" id="create-slot-service" value="svc_mus_001">
+                </div>
+                <div class="input-group">
+                    <label>Staff ID (optional):</label>
+                    <input type="text" id="create-slot-staff" value="usr_staff_001">
+                </div>
+                <div class="input-group">
+                    <label>Start Time:</label>
+                    <input type="datetime-local" id="create-slot-start">
+                </div>
+                <div class="input-group">
+                    <label>End Time:</label>
+                    <input type="datetime-local" id="create-slot-end">
+                </div>
+                <div class="input-group">
+                    <label>Capacity:</label>
+                    <input type="number" id="create-slot-capacity" value="1">
+                </div>
+                <button onclick="testEndpoint('createSlot')">Test</button>
+                <div class="result" id="result-createSlot"></div>
+            </div>
+
+            <div class="endpoint">
+                <h3><span class="method patch">PATCH</span> Update Slot</h3>
+                <div class="input-group">
+                    <label>Slot ID:</label>
+                    <input type="text" id="update-slot-id" value="slot_test_001">
+                </div>
+                <div class="input-group">
+                    <label>Is Active:</label>
+                    <select id="update-slot-active">
+                        <option value="true">Active</option>
+                        <option value="false">Inactive</option>
+                    </select>
+                </div>
+                <button onclick="testEndpoint('updateSlot')">Test</button>
+                <div class="result" id="result-updateSlot"></div>
+            </div>
+
+            <div class="endpoint">
+                <h3><span class="method delete">DELETE</span> Soft Delete Slot</h3>
+                <div class="input-group">
+                    <label>Slot ID:</label>
+                    <input type="text" id="delete-slot-id" value="slot_test_001">
+                </div>
+                <button onclick="testEndpoint('deleteSlot')">Test</button>
+                <div class="result" id="result-deleteSlot"></div>
+            </div>
+
+            <div class="endpoint">
+                <h3><span class="method get">GET</span> View Audit Logs</h3>
+                <button onclick="testEndpoint('getAuditLogs')">Test</button>
+                <div class="result" id="result-getAuditLogs"></div>
+            </div>
+
+            <div class="endpoint">
+                <h3><span class="method get">GET</span> Export Audit Logs (CSV)</h3>
+                <button onclick="testEndpoint('exportAuditLogs')">Test</button>
+                <div class="result" id="result-exportAuditLogs"></div>
+            </div>
+
+            <div class="endpoint">
+                <h3><span class="method get">GET</span> Get Retention Period</h3>
+                <button onclick="testEndpoint('getRetention')">Test</button>
+                <div class="result" id="result-getRetention"></div>
+            </div>
+
+            <div class="endpoint">
+                <h3><span class="method put">PUT</span> Update Retention Period</h3>
+                <div class="input-group">
+                    <label>Days:</label>
+                    <input type="number" id="retention-days" value="30">
+                </div>
+                <button onclick="testEndpoint('updateRetention')">Test</button>
+                <div class="result" id="result-updateRetention"></div>
+            </div>
+
+            <div class="endpoint">
+                <h3><span class="method delete">DELETE</span> Cleanup Expired Slots</h3>
+                <button onclick="testEndpoint('cleanupSlots')">Test</button>
+                <div class="result" id="result-cleanupSlots"></div>
+            </div>
+        </div>
+
+        <!-- Staff & Customers Management -->
+        <div id="staff" class="section">
+            <h2>👥 Staff & Customers Management</h2>
+            
+            <div class="endpoint">
+                <h3><span class="method get">GET</span> List Staff</h3>
+                <div class="input-group">
+                    <label>Search (optional):</label>
+                    <input type="text" id="staff-search" value="">
+                </div>
+                <button onclick="testEndpoint('listStaff')">Test</button>
+                <div class="result" id="result-listStaff"></div>
+            </div>
+
+            <div class="endpoint">
+                <h3><span class="method post">POST</span> Assign Staff to Service</h3>
+                <div class="input-group">
+                    <label>Staff ID:</label>
+                    <input type="text" id="assign-staff-id" value="usr_staff_001">
+                </div>
+                <div class="input-group">
+                    <label>Service Type ID:</label>
+                    <input type="text" id="assign-service-id" value="svc_mus_001">
+                </div>
+                <button onclick="testEndpoint('assignStaffService')">Test</button>
+                <div class="result" id="result-assignStaffService"></div>
+            </div>
+
+            <div class="endpoint">
+                <h3><span class="method get">GET</span> List Customers</h3>
+                <div class="input-group">
+                    <label>Search (optional):</label>
+                    <input type="text" id="customers-search" value="">
+                </div>
+                <button onclick="testEndpoint('listCustomers')">Test</button>
+                <div class="result" id="result-listCustomers"></div>
+            </div>
+
+            <div class="endpoint">
+                <h3><span class="method get">GET</span> Get Customer Details</h3>
+                <div class="input-group">
+                    <label>Customer ID:</label>
+                    <input type="text" id="customer-details-id" value="usr_cust_001">
+                </div>
+                <button onclick="testEndpoint('getCustomerDetails')">Test</button>
+                <div class="result" id="result-getCustomerDetails"></div>
+            </div>
+        </div>
+
+        <!-- Files -->
+        <div id="files" class="section">
+            <h2>📁 Files</h2>
+            
+            <div class="endpoint">
+                <h3><span class="method get">GET</span> Get Customer ID Image</h3>
+                <div class="input-group">
+                    <label>Customer ID:</label>
+                    <input type="text" id="file-customer-id" value="usr_cust_001">
+                </div>
+                <button onclick="testEndpoint('getCustomerImage')">Test</button>
+                <div class="result" id="result-getCustomerImage"></div>
+            </div>
+
+            <div class="endpoint">
+                <h3><span class="method get">GET</span> Get Appointment Attachment</h3>
+                <div class="input-group">
+                    <label>Appointment ID:</label>
+                    <input type="text" id="file-appt-id" value="appt_001">
+                </div>
+                <button onclick="testEndpoint('getAttachment')">Test</button>
+                <div class="result" id="result-getAttachment"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ============================================
+        // CONFIGURATION
+        // ============================================
+        const API_BASE = 'http://localhost:8000';
+
+        // User credentials mapping
+        const CREDENTIALS = {
+            'admin': { username: 'admin', password: 'Admin@123' },
+            'mgr_muscat': { username: 'mgr_muscat', password: 'Manager@123' },
+            'mgr_suhar': { username: 'mgr_suhar', password: 'Manager@123' },
+            'staff_muscat_1': { username: 'staff_muscat_1', password: 'Staff@123' },
+            'staff_muscat_2': { username: 'staff_muscat_2', password: 'Staff@123' },
+            'staff_suhar_1': { username: 'staff_suhar_1', password: 'Staff@123' },
+            'cust_ahmed': { username: 'cust_ahmed', password: 'Customer@123' },
+            'cust_fatima': { username: 'cust_fatima', password: 'Customer@123' },
+            'cust_khalid': { username: 'cust_khalid', password: 'Customer@123' }
+        };
+
+        let currentUser = null;
+        let authHeader = null;
+
+        // ============================================
+        // UTILITY FUNCTIONS
+        // ============================================
+        
+        function makeAuthHeader(username, password) {
+            const credentials = btoa(`${username}:${password}`);
+            return `Basic ${credentials}`;
+        }
+
+        async function apiCall(method, endpoint, body = null, username = null, password = null) {
+            const headers = {
+                'Content-Type': 'application/json'
+            };
+            
+            // Use provided credentials or current session
+            if (username && password) {
+                headers['Authorization'] = makeAuthHeader(username, password);
+            } else if (authHeader) {
+                headers['Authorization'] = authHeader;
+            }
+
+            const options = {
+                method: method,
+                headers: headers
+            };
+
+            if (body && method !== 'GET') {
+                options.body = JSON.stringify(body);
+            }
+
+            const url = `${API_BASE}${endpoint}`;
+            
+            try {
+                const response = await fetch(url, options);
+                const contentType = response.headers.get('content-type');
+                
+                if (contentType && contentType.includes('application/json')) {
+                    const data = await response.json();
+                    return { 
+                        status: response.status, 
+                        ok: response.ok, 
+                        data: data 
+                    };
+                } else if (contentType && contentType.includes('text/csv')) {
+                    const text = await response.text();
+                    return {
+                        status: response.status,
+                        ok: response.ok,
+                        data: text,
+                        isCsv: true
+                    };
+                } else {
+                    return { 
+                        status: response.status, 
+                        ok: response.ok, 
+                        data: await response.text() 
+                    };
+                }
+            } catch (error) {
+                return { 
+                    status: 0, 
+                    ok: false, 
+                    data: { detail: error.message },
+                    error: true
+                };
+            }
+        }
+
+        function showResult(endpoint, result, isSuccess = null) {
+            const el = document.getElementById(`result-${endpoint}`);
+            if (!el) return;
+            
+            const success = isSuccess !== null ? isSuccess : (result.ok || result.status < 400);
+            el.className = `result ${success ? 'success' : 'error'}`;
+            
+            if (result.error) {
+                el.textContent = `Error: ${result.data.detail || result.data}`;
+            } else if (result.isCsv) {
+                el.textContent = `CSV Downloaded (${result.status})\n\nPreview:\n${result.data.substring(0, 1000)}...`;
+            } else if (result.status === 204) {
+                el.textContent = `Success: ${result.status} No Content`;
+            } else {
+                el.textContent = `Status: ${result.status}\n\n${JSON.stringify(result.data, null, 2)}`;
+            }
+        }
+
+        // ============================================
+        // LOGIN / AUTH
+        // ============================================
+
+        document.getElementById('roleSelect').addEventListener('change', function() {
+            const customUsername = document.getElementById('customUsername');
+            const customPassword = document.getElementById('customPassword');
+            
+            if (this.value === 'custom') {
+                customUsername.classList.remove('hidden');
+                customPassword.classList.remove('hidden');
+            } else {
+                customUsername.classList.add('hidden');
+                customPassword.classList.add('hidden');
+            }
+        });
+
+        async function login() {
+            const role = document.getElementById('roleSelect').value;
+            let username, password;
+
+            if (role === 'custom') {
+                username = document.getElementById('customUsername').value;
+                password = document.getElementById('customPassword').value;
+            } else if (role) {
+                const creds = CREDENTIALS[role];
+                username = creds.username;
+                password = creds.password;
+            } else {
+                alert('Please select a role');
+                return;
+            }
+
+            const result = await apiCall('GET', '/auth/me', null, username, password);
+            
+            if (result.ok) {
+                currentUser = result.data;
+                authHeader = makeAuthHeader(username, password);
+                document.getElementById('userInfo').classList.add('active');
+                document.getElementById('currentUser').textContent = `${currentUser.full_name} (${currentUser.role}) - @${currentUser.username}`;
+                document.getElementById('loginStatus').textContent = '✓ Logged in';
+                document.getElementById('loginStatus').className = 'status-badge success';
+            } else {
+                document.getElementById('userInfo').classList.add('active');
+                document.getElementById('currentUser').textContent = 'Login failed';
+                document.getElementById('loginStatus').textContent = '✗ Failed';
+                document.getElementById('loginStatus').className = 'status-badge error';
+            }
+        }
+
+        // ============================================
+        // TAB HANDLING
+        // ============================================
+
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', function() {
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+                
+                this.classList.add('active');
+                document.getElementById(this.dataset.section).classList.add('active');
+            });
+        });
+
+        // ============================================
+        // ENDPOINT TESTS
+        // ============================================
+
+        async function testEndpoint(endpoint) {
+            let result;
+            
+            switch(endpoint) {
+                // Public
+                case 'getBranches':
+                    result = await apiCall('GET', '/branches');
+                    showResult(endpoint, result);
+                    break;
+                    
+                case 'getServices':
+                    const branchId = document.getElementById('public-branch-id').value;
+                    result = await apiCall('GET', `/branches/${branchId}/services`);
+                    showResult(endpoint, result);
+                    break;
+                    
+                case 'getSlots':
+                    const slotBranch = document.getElementById('public-slots-branch').value;
+                    const serviceId = document.getElementById('public-slots-service').value;
+                    const date = document.getElementById('public-slots-date').value;
+                    let slotsUrl = `/branches/${slotBranch}/slots`;
+                    const params = [];
+                    if (serviceId) params.push(`service_type_id=${serviceId}`);
+                    if (date) params.push(`date=${date}`);
+                    if (params.length) slotsUrl += '?' + params.join('&');
+                    result = await apiCall('GET', slotsUrl);
+                    showResult(endpoint, result);
+                    break;
+                
+                // Auth
+                case 'register':
+                    const regData = {
+                        username: document.getElementById('reg-username').value,
+                        password: document.getElementById('reg-password').value,
+                        full_name: document.getElementById('reg-fullname').value,
+                        email: document.getElementById('reg-email').value,
+                        phone: document.getElementById('reg-phone').value,
+                        id_image: document.getElementById('reg-idimage').value
+                    };
+                    result = await apiCall('POST', '/auth/register', regData);
+                    showResult(endpoint, result);
+                    break;
+                    
+                case 'getMe':
+                    result = await apiCall('GET', '/auth/me');
+                    showResult(endpoint, result);
+                    break;
+                
+                // Customer
+                case 'bookAppointment':
+                    const bookData = {
+                        branch_id: document.getElementById('book-branch').value,
+                        service_type_id: document.getElementById('book-service').value,
+                        slot_id: document.getElementById('book-slot').value
+                    };
+                    result = await apiCall('POST', '/customers/appointments', bookData);
+                    showResult(endpoint, result);
+                    break;
+                    
+                case 'listMyAppointments':
+                    let myApptsUrl = '/customers/appointments';
+                    const myStatus = document.getElementById('my-appts-status').value;
+                    if (myStatus) myApptsUrl += `?status_filter=${myStatus}`;
+                    result = await apiCall('GET', myApptsUrl);
+                    showResult(endpoint, result);
+                    break;
+                    
+                case 'getAppointmentDetails':
+                    const apptId = document.getElementById('appt-details-id').value;
+                    result = await apiCall('GET', `/customers/appointments/${apptId}`);
+                    showResult(endpoint, result);
+                    break;
+                    
+                case 'cancelAppointment':
+                    const cancelId = document.getElementById('cancel-appt-id').value;
+                    result = await apiCall('DELETE', `/customers/appointments/${cancelId}`);
+                    showResult(endpoint, result);
+                    break;
+                    
+                case 'rescheduleAppointment':
+                    const rescheduleData = {
+                        new_slot_id: document.getElementById('reschedule-slot-id').value
+                    };
+                    const rescheduleId = document.getElementById('reschedule-appt-id').value;
+                    result = await apiCall('POST', `/customers/appointments/${rescheduleId}/reschedule`, rescheduleData);
+                    showResult(endpoint, result);
+                    break;
+                
+                // Management
+                case 'listAppointments':
+                    let mgmtUrl = '/management/appointments?';
+                    const mgmtBranch = document.getElementById('mgmt-appts-branch').value;
+                    const mgmtStaff = document.getElementById('mgmt-appts-staff').value;
+                    const mgmtStatus = document.getElementById('mgmt-appts-status').value;
+                    if (mgmtBranch) mgmtUrl += `branch_id=${mgmtBranch}&`;
+                    if (mgmtStaff) mgmtUrl += `staff_id=${mgmtStaff}&`;
+                    if (mgmtStatus) mgmtUrl += `status_filter=${mgmtStatus}&`;
+                    result = await apiCall('GET', mgmtUrl.endsWith('&') ? mgmtUrl.slice(0,-1) : mgmtUrl);
+                    showResult(endpoint, result);
+                    break;
+                    
+                case 'updateAppointment':
+                    const updateData = {
+                        status: document.getElementById('update-appt-status').value,
+                        notes: document.getElementById('update-appt-notes').value || undefined
+                    };
+                    const updateId = document.getElementById('update-appt-id').value;
+                    result = await apiCall('PATCH', `/management/appointments/${updateId}`, updateData);
+                    showResult(endpoint, result);
+                    break;
+                    
+                case 'createSlot':
+                    const startTime = document.getElementById('create-slot-start').value;
+                    const endTime = document.getElementById('create-slot-end').value;
+                    const slotData = {
+                        id: document.getElementById('create-slot-id').value,
+                        branch_id: document.getElementById('create-slot-branch').value,
+                        service_type_id: document.getElementById('create-slot-service').value,
+                        staff_id: document.getElementById('create-slot-staff').value || undefined,
+                        start_at: startTime ? new Date(startTime).toISOString() : new Date().toISOString(),
+                        end_at: endTime ? new Date(endTime).toISOString() : new Date(Date.now() + 900000).toISOString(),
+                        capacity: parseInt(document.getElementById('create-slot-capacity').value)
+                    };
+                    result = await apiCall('POST', '/management/slots', slotData);
+                    showResult(endpoint, result);
+                    break;
+                    
+                case 'updateSlot':
+                    const updateSlotData = {
+                        is_active: document.getElementById('update-slot-active').value === 'true'
+                    };
+                    const updateSlotId = document.getElementById('update-slot-id').value;
+                    result = await apiCall('PATCH', `/management/slots/${updateSlotId}`, updateSlotData);
+                    showResult(endpoint, result);
+                    break;
+                    
+                case 'deleteSlot':
+                    const deleteSlotId = document.getElementById('delete-slot-id').value;
+                    result = await apiCall('DELETE', `/management/slots/${deleteSlotId}`);
+                    showResult(endpoint, result);
+                    break;
+                    
+                case 'getAuditLogs':
+                    result = await apiCall('GET', '/management/audit-logs');
+                    showResult(endpoint, result);
+                    break;
+                    
+                case 'exportAuditLogs':
+                    result = await apiCall('GET', '/management/audit-logs/export');
+                    showResult(endpoint, result);
+                    if (result.ok && result.isCsv) {
+                        const blob = new Blob([result.data], { type: 'text/csv' });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = 'audit_logs.csv';
+                        a.click();
+                    }
+                    break;
+                    
+                case 'getRetention':
+                    result = await apiCall('GET', '/management/config/retention-period');
+                    showResult(endpoint, result);
+                    break;
+                    
+                case 'updateRetention':
+                    const retData = {
+                        days: parseInt(document.getElementById('retention-days').value)
+                    };
+                    result = await apiCall('PUT', '/management/config/retention-period', retData);
+                    showResult(endpoint, result);
+                    break;
+                    
+                case 'cleanupSlots':
+                    result = await apiCall('DELETE', '/management/slots/cleanup');
+                    showResult(endpoint, result);
+                    break;
+                
+                // Files
+                case 'getCustomerImage':
+                    const custId = document.getElementById('file-customer-id').value;
+                    result = await apiCall('GET', `/files/customer/${custId}/id-image`);
+                    showResult(endpoint, result);
+                    break;
+                    
+                case 'getAttachment':
+                    const fileApptId = document.getElementById('file-appt-id').value;
+                    result = await apiCall('GET', `/files/appointments/${fileApptId}/attachment`);
+                    showResult(endpoint, result);
+                    break;
+                
+                // Staff & Customers
+                case 'listStaff':
+                    let staffUrl = '/management/staff?';
+                    const staffSearch = document.getElementById('staff-search').value;
+                    if (staffSearch) staffUrl += `search=${staffSearch}&`;
+                    result = await apiCall('GET', staffUrl.endsWith('&') ? staffUrl.slice(0,-1) : staffUrl);
+                    showResult(endpoint, result);
+                    break;
+                    
+                case 'assignStaffService':
+                    const assignData = {
+                        staff_id: document.getElementById('assign-staff-id').value,
+                        service_type_id: document.getElementById('assign-service-id').value
+                    };
+                    result = await apiCall('POST', '/management/staff-service-types', assignData);
+                    showResult(endpoint, result);
+                    break;
+                    
+                case 'listCustomers':
+                    let custUrl = '/management/customers?';
+                    const custSearch = document.getElementById('customers-search').value;
+                    if (custSearch) custUrl += `search=${custSearch}&`;
+                    result = await apiCall('GET', custUrl.endsWith('&') ? custUrl.slice(0,-1) : custUrl);
+                    showResult(endpoint, result);
+                    break;
+                    
+                case 'getCustomerDetails':
+                    const custDetailsId = document.getElementById('customer-details-id').value;
+                    result = await apiCall('GET', `/management/customers/${custDetailsId}`);
+                    showResult(endpoint, result);
+                    break;
+            }
+        }
+
+        // Set default datetime values
+        const now = new Date();
+        const later = new Date(now.getTime() + 3600000); // +1 hour
+        document.getElementById('create-slot-start').value = now.toISOString().slice(0, 16);
+        document.getElementById('create-slot-end').value = later.toISOString().slice(0, 16);
+    </script>
+</body>
+</html>

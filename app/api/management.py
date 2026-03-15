@@ -27,7 +27,7 @@ from app.models.models import (
 from app.schemas.schemas import (
     SlotCreate, SlotUpdate, SlotResponse, AppointmentUpdate,
     AppointmentResponse, PaginatedResponse, RetentionPeriodUpdate, 
-    SystemConfigResponse
+    SystemConfigResponse, StaffServiceTypeCreate, StaffListItem, CustomerListItem
 )
 from app.services.audit_service import create_audit_log, get_audit_logs, get_branch_audit_logs
 
@@ -699,4 +699,302 @@ def cleanup_soft_deleted_slots(
     db.commit()
     
     return None
+
+
+@router.get("/staff", response_model=PaginatedResponse)
+def list_staff(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+    page: int = Query(1, ge=1),
+    size: int = Query(10, ge=1, le=100),
+    search: Optional[str] = Query(None, description="Search term")
+):
+    """
+    List staff members.
+    
+    ADMIN: All staff across all branches
+    BRANCH_MANAGER: Only staff in their branch
+    
+    Args:
+        current_user: Current authenticated user
+        db: Database session
+        page: Page number
+        size: Items per page
+        search: Optional search term
+        
+    Returns:
+        PaginatedResponse: List of staff members
+        
+    Raises:
+        HTTPException: 403 if insufficient permissions
+    """
+    if current_user.role not in [UserRole.ADMIN, UserRole.BRANCH_MANAGER]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Insufficient permissions"
+        )
+    
+    query = db.query(User).filter(User.role.in_([UserRole.STAFF, UserRole.BRANCH_MANAGER]))
+    
+    if current_user.role == UserRole.BRANCH_MANAGER:
+        query = query.filter(User.branch_id == current_user.branch_id)
+    
+    if search:
+        search_term = f"%{search}%"
+        query = query.filter(
+            (User.full_name.ilike(search_term)) |
+            (User.email.ilike(search_term)) |
+            (User.username.ilike(search_term))
+        )
+    
+    total = query.count()
+    
+    offset = (page - 1) * size
+    staff_members = query.order_by(User.full_name).offset(offset).limit(size).all()
+    
+    return PaginatedResponse(
+        results=[{
+            "id": s.id,
+            "username": s.username,
+            "full_name": s.full_name,
+            "email": s.email,
+            "role": s.role.value,
+            "branch_id": s.branch_id,
+            "is_active": s.is_active,
+            "created_at": s.created_at.isoformat()
+        } for s in staff_members],
+        total=total,
+        page=page,
+        size=size
+    )
+
+
+@router.post("/staff-service-types", response_model=dict, status_code=status.HTTP_201_CREATED)
+def assign_staff_to_service(
+    assignment: StaffServiceTypeCreate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Assign a staff member to a service type.
+    
+    ADMIN: Can assign any staff to any service
+    BRANCH_MANAGER: Can only assign staff in their branch
+    
+    Args:
+        assignment: Staff service type assignment data
+        current_user: Current authenticated user
+        db: Database session
+        
+    Returns:
+        dict: Created assignment
+        
+    Raises:
+        HTTPException: 403 if insufficient permissions, 404 if not found
+    """
+    from app.models.models import StaffServiceType
+    
+    staff = db.query(User).filter(User.id == assignment.staff_id).first()
+    if not staff:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Staff member not found"
+        )
+    
+    if current_user.role == UserRole.BRANCH_MANAGER:
+        if staff.branch_id != current_user.branch_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You can only assign staff in your branch"
+            )
+    elif current_user.role != UserRole.ADMIN:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Insufficient permissions"
+        )
+    
+    service = db.query(ServiceType).filter(ServiceType.id == assignment.service_type_id).first()
+    if not service:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Service type not found"
+        )
+    
+    if current_user.role == UserRole.BRANCH_MANAGER:
+        if service.branch_id != current_user.branch_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Service type not in your branch"
+            )
+    
+    existing = db.query(StaffServiceType).filter(
+        StaffServiceType.staff_id == assignment.staff_id,
+        StaffServiceType.service_type_id == assignment.service_type_id
+    ).first()
+    
+    if existing:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Staff already assigned to this service type"
+        )
+    
+    assignment_id = f"sst_{assignment.staff_id}_{assignment.service_type_id}"
+    new_assignment = StaffServiceType(
+        id=assignment_id,
+        staff_id=assignment.staff_id,
+        service_type_id=assignment.service_type_id
+    )
+    
+    db.add(new_assignment)
+    db.commit()
+    db.refresh(new_assignment)
+    
+    create_audit_log(
+        db=db,
+        actor_id=current_user.id,
+        actor_role=current_user.role,
+        action_type=ActionType.STAFF_ASSIGNED,
+        entity_type="STAFF_SERVICE_TYPE",
+        entity_id=assignment_id,
+        metadata={
+            "staff_id": assignment.staff_id,
+            "service_type_id": assignment.service_type_id
+        }
+    )
+    
+    return {
+        "id": new_assignment.id,
+        "staff_id": new_assignment.staff_id,
+        "service_type_id": new_assignment.service_type_id,
+        "created_at": new_assignment.created_at.isoformat()
+    }
+
+
+@router.get("/customers", response_model=PaginatedResponse)
+def list_customers(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+    page: int = Query(1, ge=1),
+    size: int = Query(10, ge=1, le=100),
+    search: Optional[str] = Query(None, description="Search term")
+):
+    """
+    List all customers.
+    
+    ADMIN and BRANCH_MANAGER can list customers.
+    
+    Args:
+        current_user: Current authenticated user
+        db: Database session
+        page: Page number
+        size: Items per page
+        search: Optional search term
+        
+    Returns:
+        PaginatedResponse: List of customers
+        
+    Raises:
+        HTTPException: 403 if insufficient permissions
+    """
+    if current_user.role not in [UserRole.ADMIN, UserRole.BRANCH_MANAGER]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Insufficient permissions"
+        )
+    
+    query = db.query(User).filter(User.role == UserRole.CUSTOMER)
+    
+    if search:
+        search_term = f"%{search}%"
+        query = query.filter(
+            (User.full_name.ilike(search_term)) |
+            (User.email.ilike(search_term)) |
+            (User.username.ilike(search_term)) |
+            (User.phone.ilike(search_term))
+        )
+    
+    total = query.count()
+    
+    offset = (page - 1) * size
+    customers = query.order_by(User.full_name).offset(offset).limit(size).all()
+    
+    return PaginatedResponse(
+        results=[{
+            "id": c.id,
+            "username": c.username,
+            "full_name": c.full_name,
+            "email": c.email,
+            "phone": c.phone,
+            "role": c.role.value,
+            "is_active": c.is_active,
+            "created_at": c.created_at.isoformat()
+        } for c in customers],
+        total=total,
+        page=page,
+        size=size
+    )
+
+
+@router.get("/customers/{customer_id}", response_model=dict)
+def get_customer(
+    customer_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Get customer details including ID image availability.
+    
+    ADMIN and BRANCH_MANAGER can view customer details.
+    
+    Args:
+        customer_id: ID of the customer
+        current_user: Current authenticated user
+        db: Database session
+        
+    Returns:
+        dict: Customer details
+        
+    Raises:
+        HTTPException: 403 if insufficient permissions, 404 if not found
+    """
+    if current_user.role not in [UserRole.ADMIN, UserRole.BRANCH_MANAGER]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Insufficient permissions"
+        )
+    
+    customer = db.query(User).filter(
+        User.id == customer_id,
+        User.role == UserRole.CUSTOMER
+    ).first()
+    
+    if not customer:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Customer not found"
+        )
+    
+    if current_user.role == UserRole.BRANCH_MANAGER:
+        has_branch_appointment = db.query(Appointment).filter(
+            Appointment.customer_id == customer_id,
+            Appointment.branch_id == current_user.branch_id
+        ).first()
+        
+        if not has_branch_appointment:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You can only view customers with appointments in your branch"
+            )
+    
+    return {
+        "id": customer.id,
+        "username": customer.username,
+        "full_name": customer.full_name,
+        "email": customer.email,
+        "phone": customer.phone,
+        "role": customer.role.value,
+        "is_active": customer.is_active,
+        "created_at": customer.created_at.isoformat(),
+        "id_image_available": customer.id_image_path is not None
+    }
 

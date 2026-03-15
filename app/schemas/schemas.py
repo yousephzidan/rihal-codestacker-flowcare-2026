@@ -299,3 +299,33 @@ class RetentionPeriodUpdate(BaseModel):
     """Schema for updating data retention period"""
     days: int = Field(..., gt=0, description="Number of days to retain soft-deleted records")
 
+
+class StaffListItem(BaseModel):
+    """Schema for staff list item response"""
+    id: str
+    username: str
+    full_name: str
+    email: str
+    role: UserRoleEnum
+    branch_id: Optional[str] = None
+    is_active: bool
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class CustomerListItem(BaseModel):
+    """Schema for customer list item response"""
+    id: str
+    username: str
+    full_name: str
+    email: str
+    phone: Optional[str] = None
+    role: UserRoleEnum
+    is_active: bool
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+

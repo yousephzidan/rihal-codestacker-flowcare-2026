@@ -169,6 +169,7 @@ Seeding is idempotent - running multiple times will not duplicate data.
 - Manage only their assigned branch
 - Create/update slots for their branch
 - Assign staff to service types in their branch
+- List and view customers in their branch
 - View/manage appointments in their branch
 - View audit logs for their branch
 
@@ -221,8 +222,15 @@ Seeding is idempotent - running multiple times will not duplicate data.
 | POST | `/management/slots` | Create time slot |
 | PATCH | `/management/slots/{id}` | Update slot |
 | DELETE | `/management/slots/{id}` | Soft-delete slot |
+| GET | `/management/staff` | List staff (Admin→all, Manager→branch) |
+| POST | `/management/staff-service-types` | Assign staff to service |
+| GET | `/management/customers` | List customers |
+| GET | `/management/customers/{id}` | Get customer details |
 | GET | `/management/audit-logs` | View audit logs |
 | GET | `/management/audit-logs/export` | Export audit logs as CSV |
+| GET | `/management/config/retention-period` | Get retention period |
+| PUT | `/management/config/retention-period` | Update retention period |
+| DELETE | `/management/slots/cleanup` | Cleanup expired slots |
 
 ### File Retrieval
 
@@ -289,7 +297,7 @@ curl -X PATCH http://localhost:8000/management/appointments/appt_123 \
 #### View audit logs (Admin):
 ```bash
 curl http://localhost:8000/management/audit-logs \
-  -u admin:Admin123!
+  -u admin:Admin@123
 ```
 
 ## Testing Credentials
@@ -298,12 +306,15 @@ The seed data includes the following users:
 
 | Role | Username | Password |
 |------|----------|----------|
-| Admin | admin | Admin123! |
-| Branch Manager (Muscat) | manager_muscat | Manager123! |
-| Branch Manager (Sohar) | manager_sohar | Manager123! |
-| Staff | staff1 | Staff123! |
-| Staff | staff2 | Staff123! |
-| Customer | customer1 | Customer123! |
+| Admin | admin | Admin@123 |
+| Branch Manager (Muscat) | mgr_muscat | Manager@123 |
+| Branch Manager (Suhar) | mgr_suhar | Manager@123 |
+| Staff (Muscat) | staff_muscat_1 | Staff@123 |
+| Staff (Muscat) | staff_muscat_2 | Staff@123 |
+| Staff (Suhar) | staff_suhar_1 | Staff@123 |
+| Customer | cust_ahmed | Customer@123 |
+| Customer | cust_fatima | Customer@123 |
+| Customer | cust_khalid | Customer@123 |
 | Customer | customer2 | Customer123! |
 
 ## Soft Delete
@@ -378,6 +389,10 @@ Search applies to relevant fields and is case-insensitive.
 | ALLOWED_IMAGE_TYPES | Allowed image MIME types | ["image/jpeg", "image/png"] |
 | ALLOWED_DOCUMENT_TYPES | Allowed document MIME types | ["application/pdf"] |
 | SOFT_DELETE_RETENTION_DAYS | Days to retain soft-deleted records | 30 |
+
+## Frontend Tester
+
+A web-based API tester is included at `app/index.html`. After starting the server, open this file in a browser to test all endpoints interactively.
 
 ## License
 
