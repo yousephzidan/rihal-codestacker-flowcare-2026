@@ -2,6 +2,8 @@
 
 # FlowCare - Queue & Appointment Booking System
 
+[Full API Documentation](https://flowcare-rihal.tech/docs)
+
 A FastAPI-based backend system for managing queue and appointment bookings at service branches across Oman.
 
 ## Overview
