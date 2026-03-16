@@ -394,6 +394,57 @@ Search applies to relevant fields and is case-insensitive.
 
 A web-based API tester is included at `app/index.html`. After starting the server, open this file in a browser to test all endpoints interactively.
 
+## Live Deployment
+
+The application is deployed at: **https://flowcare-rihal.tech**
+
+### Deployment Instructions (Docker)
+
+1. **Server Setup** (DigitalOcean Droplet):
+   ```bash
+   # Install Docker and Docker Compose
+   sudo apt update
+   sudo apt install docker.io docker-compose nginx certbot python3-certbot-nginx
+   sudo systemctl start docker
+   ```
+
+2. **Deploy with Docker Compose**:
+   ```bash
+   # Clone the repository
+   git clone https://github.com/yousephzidan/rihal-codestacker-flowcare-2026
+   cd rihal-codestacker-flowcare-2026
+
+   # Start the application (database + API)
+   docker-compose up -d
+   ```
+
+3. **Configure Nginx**:
+   ```bash
+   sudo vim /etc/nginx/sites-available/flowcare
+   ```
+   
+   Add the following configuration:
+   ```nginx
+   server {
+       server_name flowcare-rihal.tech www.flowcare-rihal.tech;
+
+       location / {
+           proxy_pass http://127.0.0.1:8000;
+           proxy_set_header Host $host;
+           proxy_set_header X-Real-IP $remote_addr;
+       }
+
+       listen 80;
+   }
+   ```
+
+4. **Enable SSL with Certbot**:
+   ```bash
+   sudo certbot --nginx -d flowcare-rihal.tech
+   ```
+
+The API will be available at **https://flowcare-rihal.tech**
+
 ## License
 
 This project is built for the Rihal Codestacker 2026 challenge.
