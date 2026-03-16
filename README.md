@@ -449,4 +449,4 @@ The API will be available at **https://flowcare-rihal.tech**
 
 ## License
 
-This project is built for the Rihal Codestacker 2026 challenge.
+This repository contains a submission for the Rihal Codestacker 2026 backend challenge and is shared for evaluation and educational purposes. All rights reserved by the author.
